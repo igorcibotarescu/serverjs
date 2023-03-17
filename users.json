@@ -1,1 +1,17 @@
-{"users":[{"email":"test","psw":"44","id":0},{"email":"d","psw":"1","id":1}]}
+[
+  {
+    "email": "updatedUser",
+    "psw": "updatedUser",
+    "id": 0
+  },
+  {
+    "email": "test123",
+    "psw": "test123",
+    "id": 1
+  },
+  {
+    "email": "test2",
+    "psw": "test2",
+    "id": 2
+  }
+]
