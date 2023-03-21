@@ -57,7 +57,7 @@ app.post("/register", async (req, res) => {
     path.join(__dirname, "users.json"),
     "utf-8"
   );
-  const users = await JSON.parse(readResponse);
+  const users = JSON.parse(readResponse);
   const user = users.find((user) => user.email === email);
   try {
     if (user) throw userExists;
@@ -87,7 +87,7 @@ app.post("/login", async (req, res) => {
     path.join(__dirname, "users.json"),
     "utf-8"
   );
-  const users = await JSON.parse(readResponse);
+  const users = JSON.parse(readResponse);
   const user = users.find((user) => user.email === email);
   if (!user) {
     res.status(200).send("Invalid Email");
@@ -108,7 +108,7 @@ app.post("/login", async (req, res) => {
 app.post("/delete", async (req, res) => {
   const { email, psw } = req.body;
   const readResponse = await fp.readFile(path.join(__dirname,"users.json"),"utf-8");
-  const users = await JSON.parse(readResponse);
+  const users = JSON.parse(readResponse);
   const user = users.find((user) => user.email === email && user.psw === psw);
   const notUser = users.filter(
     (user) => user.email !== email && user.psw !== psw
@@ -116,14 +116,15 @@ app.post("/delete", async (req, res) => {
   if (!user) res.status(200).send("User not found");
   else {
     const userJson = !notUser ? new Array() : correctIndex(notUser);
-    fs.writeFileSync("users.json", JSON.stringify(userJson, null, 2));
+    await fp.writeFile("users.json", JSON.stringify(userJson, null, 2));
     res.status(200).send("User succesfully deleted!");
   }
 });
 
-app.post("/update", (req, res) => {
+app.post("/update", async(req, res) => {
   const { email, psw, uemail, upsw } = req.body;
-  const users = JSON.parse(fs.readFileSync("users.json"));
+  const readResponse = await fp.readFile(path.join(__dirname,"users.json"),"utf-8");
+  const users = JSON.parse(readResponse);
   const userIndex = users.findIndex(
     (user) => user.email === email && user.psw === psw
   );
@@ -137,7 +138,7 @@ app.post("/update", (req, res) => {
   if (!checkForNewUser) {
     users[userIndex].email = uemail;
     users[userIndex].psw = upsw;
-    fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
+    await fp.writeFile("users.json", JSON.stringify(userJson, null, 2));
     res.redirect("/update");
   } else
     res.status(200).send("Credentials already registered by another user!");
