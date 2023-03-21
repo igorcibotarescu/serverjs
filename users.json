@@ -8,10 +8,5 @@
     "email": "test123",
     "psw": "test123",
     "id": 1
-  },
-  {
-    "email": "test2",
-    "psw": "test2",
-    "id": 2
   }
 ]

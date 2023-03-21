@@ -1,15 +1,28 @@
+require("dotenv").config();
 const express = require("express");
-const { type } = require("os");
 const app = express();
 const path = require("path");
 const fs = require("fs");
+const fp = require("fs").promises;
 const passDoNotMatch = "Passwords do not match!";
 const userExists = "User already exists!";
+var EventEmitter = require('events').EventEmitter;
+
+// sesion expired variable
+var expired = true;
+const sesionString = "Sesion Expired";
+
+var sesionExpired = new EventEmitter();
+
+sesionExpired.on(sesionString, (data) =>{
+  console.log('Event fired!');
+  app.send(data);
+});
 
 // server config
-const PORT = 8080;
-
+const PORT = parseInt(process.env.PORT) || 8080;
 app.use(express.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname)));
 app.listen(PORT, () => console.log(`The server is alive on port ${PORT}!`));
 
 //get Requests
@@ -22,7 +35,11 @@ app.get("/register", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  res.status(200).sendFile(path.join(__dirname, "/login.html"));
+  if (!expired) {
+    res.status(200).sendFile(path.join(__dirname, "/home.html"));
+  } else {
+    res.status(200).sendFile(path.join(__dirname, "/login.html"));
+  }
 });
 
 app.get("/delete", (req, res) => {
@@ -34,9 +51,13 @@ app.get("/update", (req, res) => {
 });
 
 //post Requests
-app.post("/register", (req, res) => {
+app.post("/register", async (req, res) => {
   const { email, psw, pswrepeat } = req.body;
-  const users = JSON.parse(fs.readFileSync("users.json"));
+  const readResponse = await fp.readFile(
+    path.join(__dirname, "users.json"),
+    "utf-8"
+  );
+  const users = await JSON.parse(readResponse);
   const user = users.find((user) => user.email === email);
   try {
     if (user) throw userExists;
@@ -56,13 +77,17 @@ app.post("/register", (req, res) => {
   };
   newUser.id = users.length > 0 ? users.length : 0;
   users.push(newUser);
-  fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
+  await fp.writeFile("users.json", JSON.stringify(users, null, 2));
   res.redirect("/login");
 });
 
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { email, psw } = req.body;
-  const users = JSON.parse(fs.readFileSync("users.json"));
+  const readResponse = await fp.readFile(
+    path.join(__dirname, "users.json"),
+    "utf-8"
+  );
+  const users = await JSON.parse(readResponse);
   const user = users.find((user) => user.email === email);
   if (!user) {
     res.status(200).send("Invalid Email");
@@ -70,13 +95,20 @@ app.post("/login", (req, res) => {
     res.status(200).send("Invalid Password");
   } else {
     res.status(200).sendFile(path.join(__dirname, "/home.html"));
+    expired = false;
+    setTimeout(() => {
+      console.log("Sesion expired!");
+      expired = true;
+      sesionExpired.emit('sesion_expired', sesionString);
+    }, 5000);
   }
 });
 
 //delete Request
-app.post("/delete", (req, res) => {
+app.post("/delete", async (req, res) => {
   const { email, psw } = req.body;
-  const users = JSON.parse(fs.readFileSync("users.json"));
+  const readResponse = await fp.readFile(path.join(__dirname,"users.json"),"utf-8");
+  const users = await JSON.parse(readResponse);
   const user = users.find((user) => user.email === email && user.psw === psw);
   const notUser = users.filter(
     (user) => user.email !== email && user.psw !== psw
